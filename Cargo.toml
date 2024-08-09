@@ -1,0 +1,13 @@
+[package]
+name = "qrcodemicroservice"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fast_qr = "0.12.5"
+hyper = { version = "1", features = ["full"] }
+log = "0.4.1"
+tokio = { version = "1", features = ["full"] }
+http-body-util = "0.1"
+hyper-util = { version = "0.1", features = ["full"] }
+bytes = "1.7.1"
