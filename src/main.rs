@@ -8,10 +8,11 @@ use hyper::body::Frame;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{body::Body, Method, Request, Response, StatusCode};
-use tokio::net::TcpListener;
 use hyper_util::rt::TokioIo;
+use tokio::net::TcpListener;
 
 use fast_qr::convert::ConvertError;
+use fast_qr::convert::{image::ImageBuilder, svg::SvgBuilder, Builder, Shape};
 use fast_qr::qr::QRBuilder;
 
 async fn qr(
@@ -38,6 +39,49 @@ async fn qr(
                 .unwrap();
 
             Ok(Response::new(full(qrcode.to_str())))
+        }
+
+        (&Method::POST, "/build/svg") => {
+            let max = req.body().size_hint().upper().unwrap_or(u64::MAX);
+            if max > 1024 * 64 {
+                let mut resp = Response::new(full("Body too big"));
+                *resp.status_mut() = hyper::StatusCode::PAYLOAD_TOO_LARGE;
+                return Ok(resp);
+            }
+
+            let whole_body = req.collect().await?.to_bytes();
+
+            let qrcode = QRBuilder::new(str::from_utf8(&whole_body).unwrap())
+                .build()
+                .unwrap();
+
+            let _svg = SvgBuilder::default()
+                .shape(Shape::RoundedSquare)
+                .to_str(&qrcode);
+
+            Ok(Response::new(full(_svg)))
+        }
+
+        (&Method::POST, "/build/png") => {
+            let max = req.body().size_hint().upper().unwrap_or(u64::MAX);
+            if max > 1024 * 64 {
+                let mut resp = Response::new(full("Body too big"));
+                *resp.status_mut() = hyper::StatusCode::PAYLOAD_TOO_LARGE;
+                return Ok(resp);
+            }
+
+            let whole_body = req.collect().await?.to_bytes();
+
+            let qrcode = QRBuilder::new(str::from_utf8(&whole_body).unwrap())
+                .build()
+                .unwrap();
+
+            let _img = ImageBuilder::default()
+                .shape(Shape::RoundedSquare)
+                .fit_width(600)
+                .to_bytes(&qrcode);
+
+            Ok(Response::new(full(_img.expect())))
         }
 
         // Return the 404 Not Found for other routes.
